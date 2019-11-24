@@ -8,7 +8,7 @@ const router = Router();
 router.options("*", cors(corsOptions));
 
 // Add sub-routes
-router.use('/api', ApiRouter);
+router.use('/api', cors(corsOptions), ApiRouter);
 
 // Export the base-router
 export default router;

@@ -10,10 +10,8 @@ const app = express();
 // Add middleware/settings/routes to express.
 app.use(logger('dev'));
 app.use(express.json());
-app.use(express.urlencoded({extended: true}));
+app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
-app.use(express.static(path.join(__dirname, 'assets')));
-app.use('/', BaseRouter);
 
 /**
  * Point express to the 'views' directory. If you're using a
@@ -44,6 +42,10 @@ const errorHandler = (
         .sendFile('./500.html', options);
 };
 
+/**
+ * Routing
+ */
+app.use('/', BaseRouter);
 app.use(errorHandler);
 
 export default app;
