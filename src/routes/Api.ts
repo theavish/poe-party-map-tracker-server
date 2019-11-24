@@ -27,15 +27,8 @@ router.get('/get-stash-items', async (req: Request, res: Response) => {
             tabs,
         })
         .set('Cookie', `${sessionIdCookieName}=${sessionId}`)
-        .end((error, response) => {
-            if (error) {
-                logger.error(error.message, error);
-
-                return res.status(BAD_REQUEST).json(response.body);
-            }
-
-            return res.status(OK).json(response.body);
-        });
+        .then(response => res.status(OK).json(response.body),
+              error => genericHandleError(error, res));
 });
 
 router.post('/trade-search', async (req: Request, res: Response) => {
@@ -48,11 +41,8 @@ router.post('/trade-search', async (req: Request, res: Response) => {
 
     superagent.post(url)
         .send(req.body)
-        .then(response => {
-            return res.status(OK).json(response.body);
-        }, error => {
-            return res.status(BAD_REQUEST).json(error.message);
-        });
+        .then(response => res.status(OK).json(response.body),
+              error => genericHandleError(error, res));
 });
 
 router.get('/trade-fetch', async (req: Request, res: Response) => {
@@ -60,23 +50,28 @@ router.get('/trade-fetch', async (req: Request, res: Response) => {
         items,
         query,
     } = req.query;
+    const itemsList = items.split(',');
+    const fetchApiItemCountLimit = 10; // this comes from their api
+    const responseCollection: Array<object> = [];
 
-    const url = GET_TRADE_FETCH
-        .replace('{items}', items.toString());
+    console.log('number of items: ', itemsList.length)
 
-    superagent.get(url)
-        .query({
-            query,
-        })
-        .end((error, response) => {
-            if (error) {
-                logger.error(error.message, error);
+    for (let i = 0; i < itemsList.length; i += fetchApiItemCountLimit) {
+        const batchItems = itemsList.slice(i, i + fetchApiItemCountLimit);
 
-                return res.status(BAD_REQUEST).json(response.body);
-            }
+        const url = GET_TRADE_FETCH
+            .replace('{items}', batchItems.toString());
 
-            return res.status(OK).json(response.body);
-        });
+        await superagent.get(url)
+            .query(query)
+            .then(response => responseCollection.push(...response.body.result),
+                  error => genericHandleError(error, res));
+    }
+
+    return res.status(OK).json({ result: responseCollection });
 });
+
+const genericHandleError = (error: Error, res: Response) =>
+    logger.error(error.message, error) || res.status(BAD_REQUEST).json(error.message);
 
 export default router;
